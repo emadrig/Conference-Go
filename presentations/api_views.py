@@ -6,7 +6,7 @@ from django.views.decorators.http import require_http_methods
 import json
 
 
-@require_http_methods("GET", "POST")
+@require_http_methods(["GET", "POST"])
 def api_list_presentations(request, conference_id):
     """
     Lists the presentation titles and the link to the
