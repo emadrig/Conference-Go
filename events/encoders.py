@@ -20,6 +20,7 @@ class LocationDetailEncoder(ModelEncoder):
         "room_count",
         "created",
         "updated",
+        "picture_url",
     ]
 
     def get_extra_data(self, o):

@@ -1,8 +1,12 @@
 from django.http import JsonResponse
 from .encoders import PresentationListEncoder, PresentaionDetailEncoder
 from .models import Presentation
+from events.models import Conference
+from django.views.decorators.http import require_http_methods
+import json
 
 
+@require_http_methods("GET", "POST")
 def api_list_presentations(request, conference_id):
     """
     Lists the presentation titles and the link to the
@@ -25,21 +29,26 @@ def api_list_presentations(request, conference_id):
         ]
     }
     """
-    presentations = Presentation.objects.filter(id=conference_id)
-    return JsonResponse(
-        {"presentations": presentations},
-        encoder=PresentationListEncoder,
-        safe=False,
-    )
-    # presentations = [
-    #     {
-    #         "title": p.title,
-    #         "status": p.status.name,
-    #         "href": p.get_api_url(),
-    #     }
-    #     for p in Presentation.objects.filter(conference=conference_id)
-    # ]
-    # return JsonResponse({"presentations": presentations})
+    if request.method == "GET":
+        presentations = Presentation.objects.filter(id=conference_id)
+        return JsonResponse(
+            {"presentations": presentations},
+            encoder=PresentationListEncoder,
+            safe=False,
+        )
+    else:
+        content = json.loads(request.body)
+        try:
+            conference = Conference.objects.get()
+            content["conference"] = conference
+        except Conference.DoesNotExist:
+            return JsonResponse(
+                {"message": "Invalid conference id"}, status=400
+            )
+        presentation = Presentation.create(**content)
+        return JsonResponse(
+            presentation, encoder=PresentaionDetailEncoder, safe=False
+        )
 
 
 def api_show_presentation(request, id):

@@ -9,8 +9,8 @@ import json
 @require_http_methods(["GET", "POST"])
 def api_list_attendees(request, conference_id):
     if request.method == "GET":
-        attendees = Attendee.objects.filter(id=conference_id)
-        return JsonResponse(attendees, encoder=AttendeeListEncoder, safe=False)
+        attendees = Attendee.objects.filter(conference=conference_id)
+        return JsonResponse({"attendees":attendees}, encoder=AttendeeListEncoder, safe=False)
     else:
         content = json.loads(request.body)
 

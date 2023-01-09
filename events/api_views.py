@@ -1,4 +1,3 @@
-import json
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from .models import Conference, Location, State
@@ -8,6 +7,8 @@ from .encoders import (
     LocationListEncoder,
     LocationDetailEncoder,
 )
+import json
+from .acls import get_city_photo, get_weather_data
 
 
 @require_http_methods(["GET", "POST"])
@@ -37,8 +38,13 @@ def api_list_conferences(request):
 @require_http_methods(["DELETE", "GET", "PUT"])
 def api_show_conference(request, id):
     conference = Conference.objects.get(id=id)
+    weather = get_weather_data(
+        conference.location.city, conference.location.state.abbreviation
+    )
     return JsonResponse(
-        conference, encoder=ConferenceDetailEncoder, safe=False
+        {"conference": conference, "weather": weather},
+        encoder=ConferenceDetailEncoder,
+        safe=False,
     )
 
 
@@ -54,15 +60,19 @@ def api_list_locations(request):
         try:
             state = State.objects.get(abbreviation=content["state"])
             content["state"] = state
-            location = Location.objects.create(**content)
-            return JsonResponse(
-                location, encoder=LocationDetailEncoder, safe=False
-            )
         except State.DoesNotExist:
             return JsonResponse(
                 {"message": "Invalid state abbreviation"},
                 status=400,
             )
+
+        content["picture_url"] = get_city_photo(
+            content["city"], content["state"].name
+        )
+        location = Location.objects.create(**content)
+        return JsonResponse(
+            location, encoder=LocationDetailEncoder, safe=False
+        )
 
 
 @require_http_methods(["DELETE", "GET", "PUT"])
@@ -86,7 +96,6 @@ def api_show_location(request, id):
                 {"message": "Invalid state abbreviation"}, status=400
             )
         Location.objects.filter(id=id).update(**content)
-
         location = Location.objects.get(id=id)
         return JsonResponse(
             location, encoder=LocationDetailEncoder, safe=False
